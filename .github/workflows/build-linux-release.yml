@@ -21,7 +21,7 @@ jobs:
           version: 10.23.0
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
         # This runs on Linux, so it downloads Linux binaries for sharp, sqlite-vec, etc.
 
       - name: Build project
