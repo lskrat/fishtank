@@ -1,0 +1,66 @@
+name: Build Linux Release Package
+
+on:
+  workflow_dispatch: # Allows manual triggering from GitHub UI
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.23.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        # This runs on Linux, so it downloads Linux binaries for sharp, sqlite-vec, etc.
+
+      - name: Build project
+        run: pnpm build
+
+      - name: Prune dev dependencies
+        run: pnpm prune --prod
+
+      - name: Download Node.js Linux Binary
+        run: |
+          wget https://nodejs.org/dist/v22.12.0/node-v22.12.0-linux-x64.tar.xz
+          tar -xf node-v22.12.0-linux-x64.tar.xz
+          mv node-v22.12.0-linux-x64 node-runtime
+
+      - name: Package for Linux
+        run: |
+          mkdir -p openclaw-linux
+          cp -r dist openclaw-linux/
+          cp -r node_modules openclaw-linux/
+          cp -r extensions openclaw-linux/
+          cp -r skills openclaw-linux/
+          cp package.json openclaw-linux/
+          cp openclaw.mjs openclaw-linux/
+          
+          # Include Node.js runtime
+          cp -r node-runtime openclaw-linux/
+          
+          # Create a simple start script using the bundled Node
+          echo '#!/bin/bash' > openclaw-linux/start.sh
+          echo 'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' >> openclaw-linux/start.sh
+          echo 'export PATH="$SCRIPT_DIR/node-runtime/bin:$PATH"' >> openclaw-linux/start.sh
+          echo 'exec "$SCRIPT_DIR/node-runtime/bin/node" "$SCRIPT_DIR/dist/index.js" gateway run --port 18789 "$@"' >> openclaw-linux/start.sh
+          chmod +x openclaw-linux/start.sh
+          
+          # Create tarball
+          tar -czf openclaw-linux-x64.tar.gz openclaw-linux
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openclaw-linux-x64
+          path: openclaw-linux-x64.tar.gz
