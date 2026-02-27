@@ -24,6 +24,11 @@ jobs:
         run: pnpm install --no-frozen-lockfile
         # This runs on Linux, so it downloads Linux binaries for sharp, sqlite-vec, etc.
 
+      - name: Create dummy A2UI bundle
+        run: |
+          mkdir -p src/canvas-host/a2ui
+          echo "export default {};" > src/canvas-host/a2ui/a2ui.bundle.js
+
       - name: Build project
         run: pnpm build
 
